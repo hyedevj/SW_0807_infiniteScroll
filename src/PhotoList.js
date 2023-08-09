@@ -8,11 +8,26 @@
 */
 
 export default function PhotoList({ $target, initialState, onScrollEnded }) {
-    let isInitialState = false
+    let isInitialize = false
 
     const $photolist = document.createElement('div')
     $target.appendChild($photolist)
     this.state = initialState
+
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && !this.state.isLoading) {
+                console.log('화면 끝', entry)
+                if (this.state.totalCount > this.state.photos.length) {
+                    onScrollEnded()
+                }
+            }
+        })
+    }, {
+        threshold: 0.5
+    })
+
+    let $lastLi = null
 
     this.setState = nextState => {
         this.state = nextState
@@ -20,11 +35,11 @@ export default function PhotoList({ $target, initialState, onScrollEnded }) {
     }
 
     this.render = () => {
-        if (!isInitialState) {
+        if (!isInitialize) {
             $photolist.innerHTML = `
                 <ul class="PhotoList_photos"></ul>
             `
-            isInitialState = true
+            isInitialize = true
         }
         const { photos } = this.state
         const $photos = $photolist.querySelector('.PhotoList_photos')
@@ -35,12 +50,23 @@ export default function PhotoList({ $target, initialState, onScrollEnded }) {
                 // 없으면 li 생성하고 $photos에 appendChild
                 const $li = document.createElement('li')
                 $li.setAttribute('data-id', photo.id)
-                $li.style = 'list-style: none;'
+                $li.style = 'list-style: none; min-height: 500px;'
                 $li.innerHTML = `<img width="100%" src="${photo.imagePath}" />`
 
                 $photos.appendChild($li)
             }
         })
+
+        const $nextLi = $photos.querySelector('li:last-child')
+
+        if ($nextLi !== null) {
+            if ($lastLi !== null) {
+                observer.unobserve($lastLi)
+            }
+
+            $lastLi = $nextLi
+            observer.observe($lastLi)
+        }
     }
 
     this.render()
